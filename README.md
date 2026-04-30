@@ -131,6 +131,30 @@ Ready! Starting chat...
 </details>
 
 <details>
+<summary><b>With Google Vertex AI (Claude + Gemini, no API key)</b></summary>
+
+```
+Provider? [1] Anthropic [2] OpenAI [3] Azure OpenAI [4] Vertex AI [5] Ollama: 4
+
+GCP project ID: my-gcp-project
+Region (e.g. us-central1, europe-west1): europe-west1
+✓ Saved
+
+Authenticate with:
+  gcloud auth application-default login
+  (or run inside Cloud Run / GKE with workload identity — no env needed)
+
+Model? [1] claude-sonnet-4-5@20250929 [2] claude-opus-4-1@20250805
+       [3] gemini-2.5-pro [4] gemini-2.5-flash [5] custom: 1
+✓ Using claude-sonnet-4-5@20250929 on Vertex AI
+
+Ready! Starting chat...
+>
+```
+
+</details>
+
+<details>
 <summary><b>With Ollama (local, free)</b></summary>
 
 ```
@@ -187,6 +211,7 @@ Amplifier works with multiple AI providers:
 - **Anthropic Claude** - Recommended, most tested (Sonnet 4.5, Opus 4.6, Haiku 4.5)
 - **OpenAI** - Good alternative (GPT-5.2, GPT-5.2-Pro, GPT-5.1-Codex)
 - **Azure OpenAI** - Enterprise users with Azure subscriptions (supports managed identity)
+- **Google Vertex AI** - Claude **and** Gemini on a single GCP project via Application Default Credentials (no API key). See [`provider-vertex-ai/`](provider-vertex-ai/README.md).
 - **Ollama** - Local, free, no API key needed (llama3, codellama, etc.)
 
 Switch providers anytime:
@@ -198,6 +223,8 @@ amplifier provider use openai
 # Or explicit
 amplifier provider use anthropic --model claude-opus-4-6
 amplifier provider use azure-openai --deployment gpt-5.5
+amplifier provider use vertex-ai --model claude-sonnet-4-5@20250929  # uses GOOGLE_CLOUD_PROJECT + ADC
+amplifier provider use vertex-ai --model gemini-2.5-pro
 ```
 
 > **Note**: We've done most of our early testing with Anthropic Claude. Other providers are supported but may have rough edges we're actively smoothing out.

@@ -128,6 +128,7 @@ Connect to AI model providers.
 | **provider-azure-openai** | Azure OpenAI with managed identity support | [amplifier-module-provider-azure-openai](https://github.com/microsoft/amplifier-module-provider-azure-openai) |
 | **provider-chat-completions** | OpenAI Chat Completions wire-format integration (llama.cpp, vLLM, LM Studio, LocalAI, etc.) | [amplifier-module-provider-chat-completions](https://github.com/microsoft/amplifier-module-provider-chat-completions) |
 | **provider-gemini** | Google Gemini integration with 1M context and thinking | [amplifier-module-provider-gemini](https://github.com/microsoft/amplifier-module-provider-gemini) |
+| **provider-vertex-ai** | Google Vertex AI integration — Claude (`anthropic[vertex]`) and Gemini (`google-genai`, `vertexai=True`) on a single GCP project, ADC auth, no API key | local: [`provider-vertex-ai/`](../provider-vertex-ai/) |
 | **provider-vllm** | vLLM server integration for self-hosted models | [amplifier-module-provider-vllm](https://github.com/microsoft/amplifier-module-provider-vllm) |
 | **provider-ollama** | Local Ollama models for offline development | [amplifier-module-provider-ollama](https://github.com/microsoft/amplifier-module-provider-ollama) |
 | **provider-github-copilot** | GitHub Copilot models via the Copilot SDK | [amplifier-module-provider-github-copilot](https://github.com/microsoft/amplifier-module-provider-github-copilot) |

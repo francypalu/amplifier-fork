@@ -1,0 +1,47 @@
+[project]
+name = "amplifier-module-provider-vertex-ai"
+version = "0.1.0"
+description = "Google Vertex AI provider module for Amplifier - Claude and Gemini models on Vertex AI"
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Francesca Palu" },
+]
+dependencies = [
+    "anthropic[vertex]>=0.40.0",
+    "google-genai>=1.0.0",
+    "google-auth>=2.30.0",
+]
+
+[project.entry-points."amplifier.modules"]
+provider-vertex-ai = "amplifier_module_provider_vertex_ai:mount"
+
+[build-system]
+requires = [
+    "hatchling",
+]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = true
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "amplifier_module_provider_vertex_ai",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib"
+asyncio_mode = "strict"
+
+[dependency-groups]
+dev = [
+    "amplifier-core>=1.0.10",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+]
