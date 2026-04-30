@@ -69,19 +69,9 @@ async def mount(
     """
     config = config or {}
 
-    project_id = (
-        config.get("project_id")
-        or os.environ.get("GOOGLE_CLOUD_PROJECT")
-        or os.environ.get("GCP_PROJECT_ID")
-    )
-    location = (
-        config.get("location")
-        or os.environ.get("GOOGLE_CLOUD_LOCATION")
-        or os.environ.get("VERTEX_REGION")
-        or "us-central1"
-    )
+    provider = VertexAIProvider(config=config, coordinator=coordinator)
 
-    if not project_id:
+    if not provider.project_id:
         logger.warning(
             "Vertex AI provider not mounted: no GCP project configured. "
             "Set GOOGLE_CLOUD_PROJECT (or pass project_id in config), then "
@@ -89,19 +79,13 @@ async def mount(
         )
         return None
 
-    provider = VertexAIProvider(
-        project_id=project_id,
-        location=location,
-        config=config,
-        coordinator=coordinator,
-    )
     provider_name = config.get("name", "vertex-ai")
     await coordinator.mount("providers", provider, name=provider_name)
     logger.info(
         "Mounted VertexAIProvider as '%s' (project=%s, location=%s)",
         provider_name,
-        project_id,
-        location,
+        provider.project_id,
+        provider.location,
     )
 
     async def cleanup():
@@ -123,15 +107,23 @@ class VertexAIProvider:
 
     def __init__(
         self,
-        project_id: str,
-        location: str,
         config: dict[str, Any] | None = None,
         coordinator: ModuleCoordinator | None = None,
     ):
-        self.project_id = project_id
-        self.location = location
         self.config = config or {}
         self.coordinator = coordinator
+        self.project_id = (
+            self.config.get("project_id")
+            or os.environ.get("GOOGLE_CLOUD_PROJECT")
+            or os.environ.get("GCP_PROJECT_ID")
+            or ""
+        )
+        self.location = (
+            self.config.get("location")
+            or os.environ.get("GOOGLE_CLOUD_LOCATION")
+            or os.environ.get("VERTEX_REGION")
+            or "us-central1"
+        )
 
         self.default_model = self.config.get(
             "default_model", "claude-sonnet-4-5@20250929"
