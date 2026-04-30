@@ -390,17 +390,19 @@ class VertexAIProvider:
             total_tokens=in_tok + out_tok,
         )
 
+        content_blocks: list[Any] = []
+        if text_parts:
+            content_blocks.append(TextContent(text="".join(text_parts)))
+        for tc in tool_calls:
+            content_blocks.append(
+                ToolCallContent(id=tc.id, name=tc.name, input=tc.arguments)
+            )
+
         return ChatResponse(
-            message=Message(
-                role="assistant",
-                content=[TextBlock(text="".join(text_parts))]
-                if text_parts
-                else "",
-            ),
-            tool_calls=tool_calls,
+            content=content_blocks,
+            tool_calls=tool_calls or None,
             usage=usage,
-            model=model,
-            stop_reason=getattr(response, "stop_reason", None),
+            finish_reason=getattr(response, "stop_reason", None),
         )
 
     # ---- Gemini backend ---------------------------------------------------
@@ -465,15 +467,15 @@ class VertexAIProvider:
             output_tokens=out_tok,
             total_tokens=in_tok + out_tok,
         )
+        content_blocks: list[Any] = []
+        if text:
+            content_blocks.append(TextContent(text=text))
+
         return ChatResponse(
-            message=Message(
-                role="assistant",
-                content=[TextBlock(text=text)] if text else "",
-            ),
-            tool_calls=[],
+            content=content_blocks,
+            tool_calls=None,
             usage=usage,
-            model=model,
-            stop_reason=None,
+            finish_reason=None,
         )
 
     # ---- shared helpers ---------------------------------------------------
