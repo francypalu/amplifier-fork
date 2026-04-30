@@ -315,6 +315,10 @@ class VertexAIProvider:
             )
         return response
 
+    def parse_tool_calls(self, response: ChatResponse) -> list[ToolCall]:
+        """Return tool calls already parsed inside ``complete()``."""
+        return list(response.tool_calls or [])
+
     async def close(self) -> None:
         """Close any open SDK clients."""
         if self._anthropic_client is not None and hasattr(
