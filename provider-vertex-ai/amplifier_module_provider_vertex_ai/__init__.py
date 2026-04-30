@@ -382,9 +382,12 @@ class VertexAIProvider:
                     )
                 )
 
+        in_tok = getattr(response.usage, "input_tokens", 0) or 0
+        out_tok = getattr(response.usage, "output_tokens", 0) or 0
         usage = Usage(
-            input_tokens=getattr(response.usage, "input_tokens", 0),
-            output_tokens=getattr(response.usage, "output_tokens", 0),
+            input_tokens=in_tok,
+            output_tokens=out_tok,
+            total_tokens=in_tok + out_tok,
         )
 
         return ChatResponse(
@@ -447,15 +450,20 @@ class VertexAIProvider:
         )
 
         text = response.text or ""
+        in_tok = (
+            getattr(response.usage_metadata, "prompt_token_count", 0) or 0
+            if response.usage_metadata
+            else 0
+        )
+        out_tok = (
+            getattr(response.usage_metadata, "candidates_token_count", 0) or 0
+            if response.usage_metadata
+            else 0
+        )
         usage = Usage(
-            input_tokens=getattr(response.usage_metadata, "prompt_token_count", 0)
-            if response.usage_metadata
-            else 0,
-            output_tokens=getattr(
-                response.usage_metadata, "candidates_token_count", 0
-            )
-            if response.usage_metadata
-            else 0,
+            input_tokens=in_tok,
+            output_tokens=out_tok,
+            total_tokens=in_tok + out_tok,
         )
         return ChatResponse(
             message=Message(
