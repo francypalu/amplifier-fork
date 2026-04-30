@@ -444,6 +444,22 @@ class VertexAIProvider:
         if system_instruction:
             config.system_instruction = system_instruction
 
+        # Pass tools so Gemini can call them (write_file, edit, bash, …).
+        # Without this, Gemini just returns text and amplifier tools never
+        # get invoked. We disable the SDK's automatic-function-calling so
+        # amplifier remains the orchestrator.
+        if request.tools:
+            config.tools = [
+                genai.types.Tool(
+                    function_declarations=self._convert_tools_for_gemini(
+                        request.tools
+                    )
+                )
+            ]
+            config.automatic_function_calling = (
+                genai.types.AutomaticFunctionCallingConfig(disable=True)
+            )
+
         response = await asyncio.wait_for(
             self.genai_client.aio.models.generate_content(
                 model=model, contents=contents, config=config
@@ -451,7 +467,27 @@ class VertexAIProvider:
             timeout=self.timeout,
         )
 
-        text = response.text or ""
+        # Pull text + function calls out of the candidates' parts.
+        text_parts: list[str] = []
+        tool_calls: list[ToolCall] = []
+        candidates = getattr(response, "candidates", None) or []
+        for cand in candidates:
+            content = getattr(cand, "content", None)
+            if not content:
+                continue
+            for part in getattr(content, "parts", None) or []:
+                if getattr(part, "text", None):
+                    text_parts.append(part.text)
+                fc = getattr(part, "function_call", None)
+                if fc:
+                    tool_calls.append(
+                        ToolCall(
+                            id=getattr(fc, "id", "") or f"gemini-{len(tool_calls)}",
+                            name=fc.name,
+                            arguments=dict(fc.args or {}),
+                        )
+                    )
+
         in_tok = (
             getattr(response.usage_metadata, "prompt_token_count", 0) or 0
             if response.usage_metadata
@@ -467,16 +503,43 @@ class VertexAIProvider:
             output_tokens=out_tok,
             total_tokens=in_tok + out_tok,
         )
+
         content_blocks: list[Any] = []
-        if text:
-            content_blocks.append(TextBlock(text=text))
+        if text_parts:
+            content_blocks.append(TextBlock(text="".join(text_parts)))
+        for tc in tool_calls:
+            content_blocks.append(
+                ToolCallBlock(id=tc.id, name=tc.name, input=tc.arguments)
+            )
 
         return ChatResponse(
             content=content_blocks,
-            tool_calls=None,
+            tool_calls=tool_calls or None,
             usage=usage,
             finish_reason=None,
         )
+
+    @staticmethod
+    def _convert_tools_for_gemini(tools: list[Any]) -> list[dict[str, Any]]:
+        """Translate Amplifier tool descriptors to Gemini function_declarations."""
+        decls: list[dict[str, Any]] = []
+        for t in tools:
+            name = getattr(t, "name", None) or t["name"]
+            description = (
+                getattr(t, "description", None) or t.get("description", "") or ""
+            )
+            params = (
+                getattr(t, "parameters", None)
+                or t.get("parameters", {"type": "object", "properties": {}})
+            )
+            decls.append(
+                {
+                    "name": name,
+                    "description": description,
+                    "parameters": params,
+                }
+            )
+        return decls
 
     # ---- shared helpers ---------------------------------------------------
 
