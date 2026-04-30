@@ -28,8 +28,10 @@ __amplifier_module_type__ = "provider"
 import asyncio
 import logging
 import os
+import random
+import re
 import time
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from amplifier_core import (
     ConfigField,
@@ -281,6 +283,64 @@ class VertexAIProvider:
             ),
         ]
 
+    async def _with_retry(
+        self,
+        call: Callable[[], Awaitable[Any]],
+        *,
+        what: str,
+        max_attempts: int = 5,
+        base_delay: float = 1.0,
+        max_delay: float = 60.0,
+    ) -> Any:
+        """Call ``call()`` and retry on 429/quota / transient errors.
+
+        Reads ``retry-after`` / ``RetryInfo`` hints from the error when present,
+        otherwise uses exponential backoff with jitter. Re-raises after
+        ``max_attempts`` so the caller sees the real error.
+        """
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                return await call()
+            except Exception as e:  # noqa: BLE001 — we want to inspect any error
+                msg = str(e)
+                is_429 = (
+                    "429" in msg
+                    or "RESOURCE_EXHAUSTED" in msg
+                    or "rate limit" in msg.lower()
+                    or "quota" in msg.lower()
+                )
+                if not is_429 or attempt >= max_attempts:
+                    raise
+
+                # Honor server-suggested delay if present, else exponential backoff.
+                hint = self._extract_retry_after_seconds(msg)
+                delay = hint if hint is not None else min(
+                    max_delay, base_delay * (2 ** (attempt - 1))
+                )
+                delay += random.uniform(0, 0.5)  # jitter
+                logger.warning(
+                    "[provider-vertex-ai] %s rate-limited (attempt %d/%d), "
+                    "waiting %.1fs before retry",
+                    what,
+                    attempt,
+                    max_attempts,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+
+    @staticmethod
+    def _extract_retry_after_seconds(error_msg: str) -> float | None:
+        """Pull a retry-after seconds value out of a Vertex/Gemini error string."""
+        match = re.search(r"retry.{0,10}?(\d+)\s*s", error_msg, re.IGNORECASE)
+        if match:
+            try:
+                return float(match.group(1))
+            except (TypeError, ValueError):
+                pass
+        return None
+
     async def complete(self, request: ChatRequest, **kwargs) -> ChatResponse:
         """Dispatch the request to the correct backend based on the model id."""
         model = str(kwargs.get("model", self.default_model))
@@ -362,9 +422,12 @@ class VertexAIProvider:
         if request.tools:
             params["tools"] = self._convert_tools(request.tools)
 
-        response = await asyncio.wait_for(
-            self.anthropic_client.messages.create(**params),
-            timeout=self.timeout,
+        response = await self._with_retry(
+            lambda: asyncio.wait_for(
+                self.anthropic_client.messages.create(**params),
+                timeout=self.timeout,
+            ),
+            what=f"Claude {model} on Vertex",
         )
 
         text_parts: list[str] = []
@@ -460,11 +523,14 @@ class VertexAIProvider:
                 genai.types.AutomaticFunctionCallingConfig(disable=True)
             )
 
-        response = await asyncio.wait_for(
-            self.genai_client.aio.models.generate_content(
-                model=model, contents=contents, config=config
+        response = await self._with_retry(
+            lambda: asyncio.wait_for(
+                self.genai_client.aio.models.generate_content(
+                    model=model, contents=contents, config=config
+                ),
+                timeout=self.timeout,
             ),
-            timeout=self.timeout,
+            what=f"Gemini {model} on Vertex",
         )
 
         # Pull text + function calls out of the candidates' parts.
