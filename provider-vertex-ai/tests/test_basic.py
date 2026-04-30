@@ -62,7 +62,9 @@ def test_backend_routing():
 
 
 def test_get_info_shape():
-    p = VertexAIProvider(config={"project_id": "x", "location": "us-central1"})
+    p = VertexAIProvider(
+        api_key=None, config={"project_id": "x", "location": "us-central1"}
+    )
     info = p.get_info()
     assert info.id == "vertex-ai"
     assert "GOOGLE_CLOUD_PROJECT" in info.credential_env_vars
@@ -72,7 +74,9 @@ def test_get_info_shape():
 
 @pytest.mark.asyncio
 async def test_list_models_returns_both_families():
-    p = VertexAIProvider(config={"project_id": "x", "location": "us-central1"})
+    p = VertexAIProvider(
+        api_key=None, config={"project_id": "x", "location": "us-central1"}
+    )
     models = await p.list_models()
     ids = [m.id for m in models]
     assert any(i.startswith("claude-") for i in ids)

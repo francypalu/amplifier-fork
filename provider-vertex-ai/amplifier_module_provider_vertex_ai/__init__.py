@@ -69,7 +69,9 @@ async def mount(
     """
     config = config or {}
 
-    provider = VertexAIProvider(config=config, coordinator=coordinator)
+    provider = VertexAIProvider(
+        api_key=None, config=config, coordinator=coordinator
+    )
 
     if not provider.project_id:
         logger.warning(
@@ -107,9 +109,14 @@ class VertexAIProvider:
 
     def __init__(
         self,
+        api_key: str | None = None,
         config: dict[str, Any] | None = None,
         coordinator: ModuleCoordinator | None = None,
     ):
+        # Vertex AI uses Application Default Credentials, not API keys.
+        # We accept ``api_key`` only to match the signature amplifier's
+        # provider auto-instantiation tries (same as Anthropic / Gemini).
+        del api_key
         self.config = config or {}
         self.coordinator = coordinator
         self.project_id = (
