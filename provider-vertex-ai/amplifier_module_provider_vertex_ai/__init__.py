@@ -37,17 +37,13 @@ from amplifier_core import (
     ModuleCoordinator,
     ProviderInfo,
 )
-from amplifier_core.content_models import (
-    TextContent,
-    ThinkingContent,
-    ToolCallContent,
-)
 from amplifier_core.message_models import (
     ChatRequest,
     ChatResponse,
     Message,
     TextBlock,
     ToolCall,
+    ToolCallBlock,
     Usage,
 )
 
@@ -392,10 +388,10 @@ class VertexAIProvider:
 
         content_blocks: list[Any] = []
         if text_parts:
-            content_blocks.append(TextContent(text="".join(text_parts)))
+            content_blocks.append(TextBlock(text="".join(text_parts)))
         for tc in tool_calls:
             content_blocks.append(
-                ToolCallContent(id=tc.id, name=tc.name, input=tc.arguments)
+                ToolCallBlock(id=tc.id, name=tc.name, input=tc.arguments)
             )
 
         return ChatResponse(
@@ -469,7 +465,7 @@ class VertexAIProvider:
         )
         content_blocks: list[Any] = []
         if text:
-            content_blocks.append(TextContent(text=text))
+            content_blocks.append(TextBlock(text=text))
 
         return ChatResponse(
             content=content_blocks,
